@@ -1,0 +1,12 @@
+[package]
+name = "pump-sdk"
+version = "0.1.0"
+edition = "2024"
+authors = ["happyboy <superhappyboy1995@gmail.com>"]
+description = "pump sdk"
+keywords = ["trade", "crypto", "finance", "solana", "pump"]
+license = "GPL-3.0"
+readme = "README.md"
+repository = "https://github.com/0xhappyboy/pump-sdk"
+
+[dependencies]
