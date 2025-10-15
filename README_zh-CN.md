@@ -2,7 +2,7 @@
     Pump.fun SDK
 </h1>
 <h4 align="center">
-Implemented functions related to interaction with Pump.fun.
+实现了与 Pump.fun 交互的相关功能.
 </h4>
 <p align="center">
   <a href="https://github.com/0xhappyboy/pump-sdk/LICENSE"><img src="https://img.shields.io/badge/License-GPL3.0-d1d1f6.svg?style=flat&labelColor=1C2C2E&color=BEC5C9&logo=googledocs&label=license&logoColor=BEC5C9" alt="License"></a>
@@ -11,9 +11,9 @@ Implemented functions related to interaction with Pump.fun.
 <a href="./README_zh-CN.md">简体中文</a> | <a href="./README.md">English</a>
 </p>
 
-## Example
+## 例子
 
-### Listen for Pump.fun related events.
+### 监听 Pump.fun 相关事件.
 
 ```rust
 use pump_sdk::listener::Listener;
