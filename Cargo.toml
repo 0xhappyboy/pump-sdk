@@ -10,3 +10,14 @@ readme = "README.md"
 repository = "https://github.com/0xhappyboy/pump-sdk"
 
 [dependencies]
+solana-client = "3.0.0"
+solana-sdk = "3.0.0"
+solana-program = "3.0.0"
+solana-transaction-status = "3.0.0"
+solana-commitment-config = "3.0.0"
+tokio-tungstenite = "0.20"
+tokio = { version = "1.0", features = ["full", "rt-multi-thread"] }
+futures-util = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = "0.11"
