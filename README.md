@@ -13,23 +13,26 @@ Implemented functions related to interaction with Pump.fun.
 
 ## Example
 
-### Listen for Pump.fun related events.
+### Parse the data structure of the bond curve.
 
 ```rust
-use pump_sdk::listener::Listener;
-#[tokio::main]
-pub async fn main() {
-    let listener = Listener::new(500, 500);
-    let _ = listener
-        .start(
-            |_event| {
-                // handle trade event
-            },
-            |_event| {
-                // handle liquidity event
-            },
-        )
-        .await;
-    let _ = tokio::signal::ctrl_c().await;
+#[cfg(test)]
+mod tests {
+    use crate::Pump;
+
+    use super::*;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test() {
+        let solana = Solana::new(solana_network_sdk::types::Mode::MAIN).unwrap();
+        let pump = Pump::new(Arc::new(solana));
+        let bond_curve = pump.create_bond_curve();
+        let pool = bond_curve
+            .get_bond_curve_pool_info("9RxTSGsTu3VdEGxRy6h3Jmk3hgP4Cfssw8SiPP4PRuKG")
+            .await
+            .unwrap();
+        println!("Bond Curve Pool: {:?}", pool);
+    }
 }
 ```
