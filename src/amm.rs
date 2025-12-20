@@ -6,7 +6,7 @@ use std::{str::FromStr, sync::Arc};
 pub const AMM_POOL_DATA_SIZE: usize = 301;
 
 #[derive(Debug, Clone)]
-pub struct AmmPoolData {
+pub struct AmmPoolInfo {
     pub pool_bump: u8,
     pub index: u16,
     pub creator: Pubkey,
@@ -24,6 +24,52 @@ pub struct AmmPoolData {
     pub lp_token_price: f64,
 }
 
+impl AmmPoolInfo {
+    pub async fn get_base_balance_f64(&self, solana: Arc<Solana>) -> Option<f64> {
+        let base_balance = solana
+            .client
+            .clone()
+            .unwrap()
+            .get_token_account_balance(&self.pool_base_token_account)
+            .await
+            .unwrap();
+        base_balance.ui_amount
+    }
+
+    pub async fn get_quote_balance_f64(&self, solana: Arc<Solana>) -> Option<f64> {
+        let quote_balance = solana
+            .client
+            .clone()
+            .unwrap()
+            .get_token_account_balance(&self.pool_quote_token_account)
+            .await
+            .unwrap();
+        quote_balance.ui_amount
+    }
+
+    pub async fn get_base_balance_string(&self, solana: Arc<Solana>) -> Option<String> {
+        let base_balance = solana
+            .client
+            .clone()
+            .unwrap()
+            .get_token_account_balance(&self.pool_base_token_account)
+            .await
+            .unwrap();
+        Some(base_balance.ui_amount_string)
+    }
+
+    pub async fn get_quote_balance_string(&self, solana: Arc<Solana>) -> Option<String> {
+        let quote_balance = solana
+            .client
+            .clone()
+            .unwrap()
+            .get_token_account_balance(&self.pool_quote_token_account)
+            .await
+            .unwrap();
+        Some(quote_balance.ui_amount_string)
+    }
+}
+
 pub struct Amm {
     pub solana: Arc<Solana>,
 }
@@ -33,7 +79,7 @@ impl Amm {
         Self { solana }
     }
 
-    pub async fn get_amm_pool_info(&self, pool_address: &str) -> Result<AmmPoolData, String> {
+    pub async fn get_amm_pool_info(&self, pool_address: &str) -> Result<AmmPoolInfo, String> {
         let account_data = self
             .solana
             .get_account_data(pool_address)
@@ -44,7 +90,7 @@ impl Amm {
     }
 
     /// Parse AMM data - using multiple attempts similar to bond_curve
-    pub fn parse_amm_data(data: &[u8]) -> Result<AmmPoolData, String> {
+    pub fn parse_amm_data(data: &[u8]) -> Result<AmmPoolInfo, String> {
         let result = Self::try_parse_with_offset(data, 0) // Standard offset
             .or_else(|| Self::try_parse_with_offset(data, 8)) // May have 8-byte prefix
             .or_else(|| Self::try_parse_with_offset(data, 1)) // Other offset
@@ -55,7 +101,7 @@ impl Amm {
         }
     }
 
-    fn try_parse_with_offset(data: &[u8], offset: usize) -> Option<AmmPoolData> {
+    fn try_parse_with_offset(data: &[u8], offset: usize) -> Option<AmmPoolInfo> {
         fn read_u8_safe(data: &[u8], offset: usize) -> Option<u8> {
             if offset < data.len() {
                 Some(data[offset])
@@ -127,7 +173,7 @@ impl Amm {
                                                         if lp_supply > 1_000_000_000
                                                             && lp_supply < 10_000_000_000_000_000
                                                         {
-                                                            return Some(AmmPoolData {
+                                                            return Some(AmmPoolInfo {
                                                                 pool_bump,
                                                                 index,
                                                                 creator,
@@ -161,7 +207,7 @@ impl Amm {
     }
 
     /// Brute force search all possible offsets
-    fn brute_force_parse(data: &[u8]) -> Option<AmmPoolData> {
+    fn brute_force_parse(data: &[u8]) -> Option<AmmPoolInfo> {
         const MIN_REQUIRED_SIZE: usize = 3 + 32 * 7 + 8; // pool_bump + index + 7 Pubkeys + lp_supply
         for start in 0..data.len().saturating_sub(MIN_REQUIRED_SIZE) {
             if let Some(result) = Self::try_parse_with_offset(data, start) {
@@ -172,7 +218,7 @@ impl Amm {
     }
 
     /// Another parsing method: based on the actual data structure you provided
-    pub fn parse_amm_data_simple(data: &[u8]) -> Result<AmmPoolData, String> {
+    pub fn parse_amm_data_simple(data: &[u8]) -> Result<AmmPoolInfo, String> {
         if data.len() < 235 {
             return Err(format!(
                 "Data too short: need at least 235 bytes, actual {} bytes",
@@ -193,26 +239,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse_amm_data_debug() {
-        let solana = Solana::new(solana_network_sdk::types::Mode::MAIN).unwrap();
-        let amm = Amm::new(Arc::new(solana));
-        // First get raw data
-        let account_data = amm
-            .solana
-            .get_account_data("GjK3S2ZgxTVFEkxg43JE8eC1tbztWCseBYyZ8o8sg9f")
+        let solana = Arc::new(Solana::new(solana_network_sdk::types::Mode::MAIN).unwrap());
+        let amm = Amm::new(solana.clone());
+        let amm_pool_info = amm
+            .get_amm_pool_info("GjK3S2ZgxTVFEkxg43JE8eC1tbztWCseBYyZ8o8sg9f")
             .await
             .unwrap();
-        println!("Data length: {}", account_data.len());
-        // Print first 100 bytes for debugging
-        println!("First 100 bytes:");
-        for (i, byte) in account_data.iter().take(100).enumerate() {
-            print!("{:02x} ", byte);
-            if (i + 1) % 16 == 0 {
-                println!();
-            }
-        }
-        println!();
-        // Try to parse
-        let result = Amm::parse_amm_data(&account_data);
-        println!("Parse result: {:?}", result);
+        println!(
+            "balance 1: {:?}",
+            amm_pool_info.get_base_balance_f64(solana.clone()).await
+        );
+        println!(
+            "balance 2: {:?}",
+            amm_pool_info.get_quote_balance_f64(solana.clone()).await
+        );
+        println!("AMM Pool Info: {:?}", amm_pool_info);
     }
 }
