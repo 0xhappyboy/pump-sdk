@@ -1,5 +1,6 @@
 mod bond_curve;
 mod global;
+mod amm;
 
 use std::sync::Arc;
 
