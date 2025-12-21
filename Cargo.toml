@@ -1,6 +1,6 @@
 [package]
 name = "pump-sdk"
-version = "0.2.0"
+version = "0.2.5"
 edition = "2024"
 authors = ["happyboy <superhappyboy1995@gmail.com>"]
 description = "pump sdk"
@@ -26,4 +26,4 @@ lazy_static = "1.5.0"
 chrono = "0.4.42"
 spl-math = "0.3.0"
 bytemuck = "1.24.0"
-solana-network-client = "0.1.0"
+solana-network-client = "0.1.5"
