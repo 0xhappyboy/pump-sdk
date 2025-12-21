@@ -1,10 +1,10 @@
+mod amm;
 mod bond_curve;
 mod global;
-mod amm;
 
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
-use solana_network_sdk::{Solana, types::UnifiedError};
+use solana_network_client::SolanaClient;
 use solana_sdk::pubkey::Pubkey;
 
 use crate::{bond_curve::BondCurve, global::PUMP_DOT_FUN_PROGRAM_ID};
@@ -52,29 +52,28 @@ pub struct PumpInfo {
 }
 
 pub struct Pump {
-    pub solana: Arc<Solana>,
+    pub solana_client: Arc<SolanaClient>,
 }
 
 impl Pump {
-    /// Create Raydium
-    /// Example
-    /// ```rust
-    /// let sol = Solana::new(solana_network_sdk::types::Mode::MAIN);
-    /// let raydium = Raydium::new(Arc::new(sol));
-    /// ```
-    pub fn new(solana: Arc<Solana>) -> Self {
-        Self { solana: solana }
+    pub fn new(solana_client: Arc<SolanaClient>) -> Self {
+        Self { solana_client }
     }
 
     pub async fn get_pump_info(&self) -> Result<PumpInfo, String> {
         let v = self
-            .solana
-            .get_account_data(PUMP_DOT_FUN_PROGRAM_ID)
+            .solana_client
+            .client_arc()
+            .get_account_data(
+                &Pubkey::from_str(PUMP_DOT_FUN_PROGRAM_ID)
+                    .map_err(|e| format!("{:?}", e))
+                    .unwrap(),
+            )
             .await
-            .map_err(|e| UnifiedError::Error(format!("{:?}", e)))
+            .map_err(|e| format!("{:?}", e))
             .unwrap();
         let pump_info = Self::parse_pump_info(&v)
-            .map_err(|e| UnifiedError::Error(format!("{:?}", e)))
+            .map_err(|e| format!("{:?}", e))
             .unwrap();
         Ok(pump_info)
     }
@@ -159,23 +158,21 @@ impl Pump {
     }
 
     pub fn create_bond_curve(&self) -> BondCurve {
-        BondCurve::new(self.solana.clone())
+        BondCurve::new(self.solana_client.clone())
     }
 }
 
 #[cfg(test)]
 mod test {
+    use solana_network_client::SolanaClient;
     use std::sync::Arc;
-
-    use solana_network_sdk::Solana;
-    use solana_network_sdk::types::Mode::MAIN;
 
     use crate::Pump;
 
     #[tokio::test]
     async fn test() -> Result<(), Box<dyn std::error::Error>> {
-        let solana = Solana::new(MAIN).unwrap();
-        let pump = Pump::new(Arc::new(solana));
+        let solana_client = SolanaClient::new(solana_network_client::Mode::MAIN).unwrap();
+        let pump = Pump::new(Arc::new(solana_client));
         let pump_info = pump.get_pump_info().await.unwrap();
         println!("Pump Info: {:?}", pump_info);
         Ok(())

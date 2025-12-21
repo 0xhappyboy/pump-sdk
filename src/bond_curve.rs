@@ -1,5 +1,4 @@
-use bytemuck::{Pod, Zeroable};
-use solana_network_sdk::Solana;
+use solana_network_client::SolanaClient;
 use solana_sdk::pubkey::Pubkey;
 use std::{str::FromStr, sync::Arc};
 
@@ -39,12 +38,12 @@ pub struct BondCurvePoolData {
 }
 
 pub struct BondCurve {
-    pub solana: Arc<Solana>,
+    pub solana_client: Arc<SolanaClient>,
 }
 
 impl BondCurve {
-    pub fn new(solana: Arc<Solana>) -> Self {
-        Self { solana }
+    pub fn new(solana_client: Arc<SolanaClient>) -> Self {
+        Self { solana_client }
     }
 
     /// Get bond curve pool data based on specified bond curve address
@@ -60,8 +59,13 @@ impl BondCurve {
     ) -> Result<BondCurvePoolData, String> {
         // Get account data
         let account_data = self
-            .solana
-            .get_account_data(&pool_address)
+            .solana_client
+            .client_arc()
+            .get_account_data(
+                &Pubkey::from_str(pool_address)
+                    .map_err(|e| format!("{:?}", e))
+                    .unwrap(),
+            )
             .await
             .map_err(|e| format!("Failed to get account data: {:?}", e))
             .unwrap();
@@ -254,10 +258,8 @@ impl BondCurve {
         let program_pubkey =
             Pubkey::from_str(program_id).map_err(|e| format!("Invalid program ID: {}", e))?;
         let accounts = self
-            .solana
-            .client
-            .clone()
-            .unwrap()
+            .solana_client
+            .client_arc()
             .get_program_accounts(&program_pubkey)
             .await
             .map_err(|e| format!("Failed to get program accounts: {}", e))?;
@@ -274,6 +276,8 @@ impl BondCurve {
 
 #[cfg(test)]
 mod tests {
+    use solana_network_client::Mode;
+
     use crate::Pump;
 
     use super::*;
@@ -281,8 +285,8 @@ mod tests {
 
     #[tokio::test]
     async fn test() {
-        let solana = Solana::new(solana_network_sdk::types::Mode::MAIN).unwrap();
-        let pump = Pump::new(Arc::new(solana));
+        let solana_client = SolanaClient::new(Mode::MAIN).unwrap();
+        let pump = Pump::new(Arc::new(solana_client));
         let bond_curve = pump.create_bond_curve();
         let pool = bond_curve
             .get_bond_curve_pool_info("9RxTSGsTu3VdEGxRy6h3Jmk3hgP4Cfssw8SiPP4PRuKG")

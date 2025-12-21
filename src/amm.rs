@@ -1,5 +1,4 @@
-use bytemuck::{Pod, Zeroable};
-use solana_network_sdk::Solana;
+use solana_network_client::SolanaClient;
 use solana_sdk::pubkey::Pubkey;
 use std::{str::FromStr, sync::Arc};
 
@@ -25,44 +24,43 @@ pub struct AmmPoolInfo {
 }
 
 impl AmmPoolInfo {
-    pub async fn get_base_balance_f64(&self, solana: Arc<Solana>) -> Option<f64> {
-        let base_balance = solana
-            .client
+    pub async fn get_base_balance_f64(&self, solana_client: Arc<SolanaClient>) -> Option<f64> {
+        let base_balance = solana_client
+            .client_arc()
             .clone()
-            .unwrap()
             .get_token_account_balance(&self.pool_base_token_account)
             .await
             .unwrap();
         base_balance.ui_amount
     }
 
-    pub async fn get_quote_balance_f64(&self, solana: Arc<Solana>) -> Option<f64> {
-        let quote_balance = solana
-            .client
+    pub async fn get_quote_balance_f64(&self, solana_client: Arc<SolanaClient>) -> Option<f64> {
+        let quote_balance = solana_client
+            .client_arc()
             .clone()
-            .unwrap()
             .get_token_account_balance(&self.pool_quote_token_account)
             .await
             .unwrap();
         quote_balance.ui_amount
     }
 
-    pub async fn get_base_balance_string(&self, solana: Arc<Solana>) -> Option<String> {
-        let base_balance = solana
-            .client
+    pub async fn get_base_balance_string(
+        &self,
+        solana_client: Arc<SolanaClient>,
+    ) -> Option<String> {
+        let base_balance = solana_client
+            .client_arc()
             .clone()
-            .unwrap()
             .get_token_account_balance(&self.pool_base_token_account)
             .await
             .unwrap();
         Some(base_balance.ui_amount_string)
     }
 
-    pub async fn get_quote_balance_string(&self, solana: Arc<Solana>) -> Option<String> {
+    pub async fn get_quote_balance_string(&self, solana: Arc<SolanaClient>) -> Option<String> {
         let quote_balance = solana
-            .client
+            .client_arc()
             .clone()
-            .unwrap()
             .get_token_account_balance(&self.pool_quote_token_account)
             .await
             .unwrap();
@@ -71,18 +69,23 @@ impl AmmPoolInfo {
 }
 
 pub struct Amm {
-    pub solana: Arc<Solana>,
+    pub solana_client: Arc<SolanaClient>,
 }
 
 impl Amm {
-    pub fn new(solana: Arc<Solana>) -> Self {
-        Self { solana }
+    pub fn new(solana_client: Arc<SolanaClient>) -> Self {
+        Self { solana_client }
     }
 
     pub async fn get_amm_pool_info(&self, pool_address: &str) -> Result<AmmPoolInfo, String> {
         let account_data = self
-            .solana
-            .get_account_data(pool_address)
+            .solana_client
+            .client_arc()
+            .get_account_data(
+                &Pubkey::from_str(pool_address)
+                    .map_err(|e| format!("{:?}", e))
+                    .unwrap(),
+            )
             .await
             .map_err(|e| format!("Failed to get account data: {:?}", e))?;
 
@@ -234,24 +237,30 @@ impl Amm {
 
 #[cfg(test)]
 mod tests {
+    use solana_network_client::Mode;
+
     use super::*;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_parse_amm_data_debug() {
-        let solana = Arc::new(Solana::new(solana_network_sdk::types::Mode::MAIN).unwrap());
-        let amm = Amm::new(solana.clone());
+        let solana_client = Arc::new(SolanaClient::new(Mode::MAIN).unwrap());
+        let amm = Amm::new(solana_client.clone());
         let amm_pool_info = amm
             .get_amm_pool_info("GjK3S2ZgxTVFEkxg43JE8eC1tbztWCseBYyZ8o8sg9f")
             .await
             .unwrap();
         println!(
             "balance 1: {:?}",
-            amm_pool_info.get_base_balance_f64(solana.clone()).await
+            amm_pool_info
+                .get_base_balance_f64(solana_client.clone())
+                .await
         );
         println!(
             "balance 2: {:?}",
-            amm_pool_info.get_quote_balance_f64(solana.clone()).await
+            amm_pool_info
+                .get_quote_balance_f64(solana_client.clone())
+                .await
         );
         println!("AMM Pool Info: {:?}", amm_pool_info);
     }
