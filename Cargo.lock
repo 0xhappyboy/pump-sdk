@@ -2275,7 +2275,7 @@ dependencies = [
 
 [[package]]
 name = "pump-sdk"
-version = "0.2.0"
+version = "0.2.5"
 dependencies = [
  "bytemuck",
  "chrono",
@@ -4131,12 +4131,13 @@ dependencies = [
 
 [[package]]
 name = "solana-network-client"
-version = "0.1.0"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e204b1f033aada2bf80d428bf8d984ad8db812d92100a08a6fbce623ac9e1bc7"
+checksum = "70e2794f88b7bc36230fc9fd69d703498b7993a5be82e6f5c09527760445b72c"
 dependencies = [
  "solana-client",
  "solana-sdk",
+ "tokio",
 ]
 
 [[package]]
